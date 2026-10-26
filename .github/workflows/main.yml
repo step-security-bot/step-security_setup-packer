@@ -1,0 +1,54 @@
+name: Builds, tests & co
+
+on:
+  - push
+  - pull_request
+
+permissions: read-all
+
+jobs:
+  hygiene:
+    name: Hygiene
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout tree
+        uses: actions/checkout@v7
+
+      - name: Set-up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run format:check
+
+      - run: npm run lint
+
+      - run: npm run type-check
+
+      - name: Ensure dist directory is up-to-date
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          npm run build
+          if [ "$(git status dist --porcelain | wc -l)" -gt "0" ]; then
+            echo "Detected uncommitted changes after build. See status below:"
+            git diff
+            exit 1
+          fi
+
+  test:
+    name: Test
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout tree
+        uses: actions/checkout@v7
+
+      - name: Use latest Packer
+        uses: ./
